@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crypto Hodler</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body>
+	<div id="app" class="">
+		<div id="header">
+			<nav>
+				<div class="nav-wrapper blue darken-4">
+					<div class="row">
+						<div class="col s12">
+							<a href="#" class="brand-logo center">Crypto Hodler</a>
+							<i class="material-icons left pointer" v-on:click="loadData()">refresh</i>
+							<i class="material-icons dropdown-trigger right" data-target='dropdown1'>more_horiz</i>
+						  	<ul id='dropdown1' class='dropdown-content'>
+							    <li><a href="/auth/logout" class="black-text">Logout</a></li>
+							    <li><a href="https://github.com/matikka96" class="black-text">Github</a></li>
+						  	</ul>
+						</div>
+					</div>
+				</div>
+			</nav>
+			<ul id="tabs-swipe" class="tabs center z-depth-1">
+				<li class="tab active"><a href="#tab-tasks">Top 100</a></li>
+			  	<li class="tab"><a href="#tab-completed">Favorites</a></li>
+			</ul>
+		</div>
+		<div class="white container">
+			<div id="tab-tasks">
+				<table class="striped">
+					<thead>
+						<tr>
+							<th id="mobile"></th>
+							<th></th>
+							<th>Name</th>
+							<th id="mobile">Market Cap</th>
+							<th>Price</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr v-for="(item, index) in items" id="row">
+							<td id="mobile">{{index+1}}.</td>
+							<td><img v-bind:src="item.ImageUrl" alt="avatar" id="avatar"></td>
+							<td>{{item.name}}</td>
+							<td id="mobile">{{item.mc}}</td>
+							<td>{{item.price}}</td>
+							<td><a href="#!" class="secondary-content" id="favorite"><i class="material-icons red-text" v-on:click="addToFavorite(item.name)">favorite</i></a></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div id="tab-completed">
+				<table class="striped">
+					<thead>
+						<tr>
+							<th></th>
+							<th>Name</th>
+							<th id="mobile">Market Cap</th>
+							<th>Price</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr v-for="item in favorites" id="row">
+							<td><img v-bind:src="item.ImageUrl" alt="avatar" id="avatar"></td>
+							<td>{{item.name}}</td>
+							<td id="mobile">{{item.mc}}</td>
+							<td>{{item.price}}</td>
+							<td><a href="#!" class="secondary-content" id="favorite"><i class="material-icons red-text" v-on:click="deleteFavorite(item.name)">close</i></a></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		
+	</div>
+
+<!-- Materialize initializatin -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        $(document).ready(function(){
+          $('.tabs').tabs();
+          $('.dropdown-trigger').dropdown();
+        });
+    </script>
+
+<!-- Import Axios -->
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<!-- Vue starts here! --> 
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+	<script>
+		Vue.component('uncompleted', {
+			props: ['name', 'ticker', 'mc', 'price', 'image-url'],
+			template: `
+				<tr id="row">
+					<td><img v-bind:src="image-url" alt="avatar"></td>
+					<td>{{name}}</td>
+					<td>{{mc}}</td>
+					<td>{{price}}</td>
+					<td><a href="#!" class="secondary-content" id="favorite"><i class="material-icons red-text" v-on:click="$emit('act-favorite', name)">favorite</i></a></td>
+				</tr>
+				
+			`
+		})
+		Vue.component('completed', {
+			props: ['name', 'ticker', 'mc', 'price', 'image-url'],
+			template: `
+				<tr id="row">
+					<td>img</td>
+					<td>{{name}}</td>
+					<td>{{mc}}</td>
+					<td>{{price}}</td>
+					<td><a href="#!" class="secondary-content" id="favorite"><i class="material-icons red-text" v-on:click="$emit('act-delete', name)">close</i></a></td>
+				</tr>
+			`
+		})
+		let app = new Vue({
+			el: '#app',
+			data: {
+				items: [],
+				favorites: []
+			},
+			methods: {
+				deleteFavorite(name) {
+					console.log(name);
+					axios.post('/profile/delete', {coinName : name})
+						.then(function (response) {
+					    	app.loadFavorites();
+					  	}).catch((error) => {
+					    	console.log(error);
+					  });
+				},
+				addToFavorite(name) {
+					console.log('Name: '+name);
+					axios.post('/profile/favorite', {coinName : name})
+					  .then((response) => {
+					  	console.log(response.data);
+					    if (response.data == 'exists') {
+					    	M.toast({html: 'Already in favorites'});
+					    }
+					    else {
+					    	M.toast({html: name+' added to favorites'});
+					    	// app.loadFavorites();
+					    }
+					  })
+					  .catch((error) => {
+					    console.log(error);
+					  });
+				},
+				loadData() {
+					console.log("Loading data from the CryptoCompare");
+					M.toast({html: '<i class="material-icons medium">sync</i>', inDuration: '0'})
+					axios.get('https://min-api.cryptocompare.com/data/top/mktcapfull?limit=100&tsym=USD&api_key={1ce5d6f4c61dbded3d6a38dce91ebf37df91fe448fd7cd97755cdf33f5791ed1}')
+						.then((response) => {
+							app.items = [];
+						    for (var i = 0; i < response.data.Data.length; i++) {
+						    	let obj = {
+						    		name: response.data.Data[i].CoinInfo.FullName,
+						    		ticker: response.data.Data[i].CoinInfo.Name,
+						    		mc: response.data.Data[i].DISPLAY.USD.MKTCAP,
+						    		price: response.data.Data[i].DISPLAY.USD.PRICE,
+						    		ImageUrl: 'https://www.cryptocompare.com'+response.data.Data[i].CoinInfo.ImageUrl
+						    	}
+								app.items.push(obj);
+						    }
+
+					  }).then(() => {
+					  		app.loadFavorites();
+					  		M.Toast.dismissAll();
+					  })
+					  .catch((error) => {
+					    console.log(error);
+					  })
+				},
+				loadFavorites() {
+					console.log('Loading / refreshing favorites')
+					axios.get('/profile/load')
+						.then((response) => {
+							app.favorites = [];
+					    	for (var i = 0; i < response.data.length; i++) {
+					    		let name = response.data[i].coinName;
+					    		for (var j = 0; j < app.items.length; j++) {
+					    			if (name == app.items[j].name) {
+					    				app.favorites.push(app.items[j]);
+					    			}
+					    		}
+					    	}
+					  	}).catch((error) => {
+					    	console.log(error);
+					  });
+				}
+			},
+			mounted() {
+				console.log("App mounted")
+				this.loadData();
+			}
+		})
+	</script>
+</body>
+
+</html>
