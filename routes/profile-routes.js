@@ -6,6 +6,8 @@ const keys = require('../config/keys');
 // Importing Axios
 const axios = require('axios');
 
+"use strict";
+
 // Helper function for verifying if user is logged in
 const authCheck = (req, res, next) => {
 	var user = req.user;
