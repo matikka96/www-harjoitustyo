@@ -1,49 +1,67 @@
 const router = require('express').Router();
 const User = require('../models/user-model');
 const Favorite = require('../models/favorite-model');
+const keys = require('../config/keys');
 
+// Importing Axios
+const axios = require('axios');
 
+// Helper function for verifying if user is logged in
 const authCheck = (req, res, next) => {
-	if (!req.user) {
-		// res.redirect('/login')
-		res.send('login')
+	var user = req.user;
+	if (!user) {
+		console.log("User not logged in");
+		res.send('login');
 	} else {
 		next();
 	}
 };
 
+// Responds with the userID
 router.get('/', authCheck, (req, res) => {
-	res.send('User is: '+req.user);
+	console.log(req.user);
+	res.send(req.user);
 });
 
-router.post('/favorite', authCheck, (req, res) => {
-	let coin = req.body.coinName;
-	console.log('/favorite: '+coin);
+// Responds with the list of coind from CryptoCompare
+router.get('/loadCoins', (req, res) => {
+	let url = "https://min-api.cryptocompare.com/data/top/mktcapfull?limit=100&tsym=USD&api_key={"+keys.cryptocompare.api_key+"}";
+	axios.get(url).then((response) => {
+		res.send(response.data);
+	}).catch((error) => {
+		console.log(error);
+		res.send(error);
+	});
+});
 
+// Adding coin to favorite
+router.post('/addFavorite', authCheck, (req, res) => {
+	let coin = req.body.coinName;
 	Favorite.findOne({userID : req.user.id, coinName : coin}).then((currentFavorite) => {
-		console.log(currentFavorite);
 		if (currentFavorite) {
-			console.log('FAVORITE ALREADY EXISTS: \n' + currentFavorite);
+			console.log('FAVORITE ALREADY EXISTS');
 			res.send('exists');
 		} else {
 			new Favorite({
 				userID: req.user.id,
 				coinName: req.body.coinName
 			}).save().then((newFavorite) => {
-				console.log('New favorite: '+newFavorite);
+				console.log('New favorite: '+newFavorite.coinName);
 			});
 			res.send('ok');
 		}
 	});
 });
 
-router.get('/load', authCheck, (req, res) => {
+// Loading users favorite coins
+router.get('/loadFavorite', authCheck, (req, res) => {
 	Favorite.find({userID : req.user.id}).then((searchResult) => {
 		res.send(searchResult);
 	})
 })
 
-router.post('/delete', authCheck, (req, res) => {
+// Delete coin from favorites
+router.post('/deleteFavorite', authCheck, (req, res) => {
 	Favorite.deleteOne({
 		userID : req.user.id,
 		coinName : req.body.coinName

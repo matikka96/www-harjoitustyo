@@ -5,9 +5,13 @@
     <meta charset="UTF-8">
     <title>Crypto Hodler</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Importing Materialize CSS and Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-    <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Importing custom CSS -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -17,11 +21,12 @@
 				<div class="nav-wrapper blue darken-4">
 					<div class="row">
 						<div class="col s12">
-							<a href="#" class="brand-logo center">Crypto Hodler</a>
+							<a href="/" class="brand-logo center">Crypto Hodler</a>
 							<i class="material-icons left pointer" v-on:click="loadData()">refresh</i>
 							<i class="material-icons dropdown-trigger right" data-target='dropdown1'>more_horiz</i>
 						  	<ul id='dropdown1' class='dropdown-content'>
-							    <li><a href="/auth/logout" class="black-text">Logout</a></li>
+						  		<li class="seen-if-not-logged"><a href="/login" class="black-text">Login</a></li>
+							    <li class="seen-if-logged"><a href="/auth/logout" class="black-text">Logout</a></li>
 							    <li><a href="https://github.com/matikka96" class="black-text">Github</a></li>
 						  	</ul>
 						</div>
@@ -29,13 +34,13 @@
 				</div>
 			</nav>
 			<ul id="tabs-swipe" class="tabs center z-depth-1">
-				<li class="tab active"><a href="#tab-tasks">Top 100</a></li>
-			  	<li class="tab"><a href="#tab-completed">Favorites</a></li>
+				<li class="tab active"><a href="#tab-toplist">Top 100</a></li>
+			  	<li class="tab"><a href="#tab-favorites">Favorites</a></li>
 			</ul>
 		</div>
 		<div class="white container">
-			<div id="tab-tasks">
-				<table class="striped">
+			<div id="tab-toplist">
+				<table class="striped fade-in">
 					<thead>
 						<tr>
 							<th id="mobile"></th>
@@ -57,8 +62,8 @@
 					</tbody>
 				</table>
 			</div>
-			<div id="tab-completed">
-				<table class="striped">
+			<div id="tab-favorites">
+				<table class="striped fade-in seen-if-logged">
 					<thead>
 						<tr>
 							<th></th>
@@ -77,9 +82,12 @@
 						</tr>
 					</tbody>
 				</table>
+				<div class="white container center fade-in seen-if-not-logged">
+					<h4>Login in order to save and view favorites</h4>
+					<a href="/auth/google"><img src="btn_google_signin.png" style="max-width: 191px;" class="responsive-img" alt="google login"></a>
+				</div>
 			</div>
 		</div>
-		
 	</div>
 
 <!-- Materialize initializatin -->
@@ -98,58 +106,33 @@
 <!-- Vue starts here! --> 
 	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
 	<script>
-		Vue.component('uncompleted', {
-			props: ['name', 'ticker', 'mc', 'price', 'image-url'],
-			template: `
-				<tr id="row">
-					<td><img v-bind:src="image-url" alt="avatar"></td>
-					<td>{{name}}</td>
-					<td>{{mc}}</td>
-					<td>{{price}}</td>
-					<td><a href="#!" class="secondary-content" id="favorite"><i class="material-icons red-text" v-on:click="$emit('act-favorite', name)">favorite</i></a></td>
-				</tr>
-				
-			`
-		})
-		Vue.component('completed', {
-			props: ['name', 'ticker', 'mc', 'price', 'image-url'],
-			template: `
-				<tr id="row">
-					<td>img</td>
-					<td>{{name}}</td>
-					<td>{{mc}}</td>
-					<td>{{price}}</td>
-					<td><a href="#!" class="secondary-content" id="favorite"><i class="material-icons red-text" v-on:click="$emit('act-delete', name)">close</i></a></td>
-				</tr>
-			`
-		})
 		let app = new Vue({
 			el: '#app',
 			data: {
+				logged: false,
 				items: [],
 				favorites: []
 			},
 			methods: {
 				deleteFavorite(name) {
-					console.log(name);
-					axios.post('/profile/delete', {coinName : name})
+					axios.post('/profile/deleteFavorite', {coinName : name})
 						.then(function (response) {
+							M.toast({html: name+' removed from favorites'});
 					    	app.loadFavorites();
 					  	}).catch((error) => {
 					    	console.log(error);
 					  });
 				},
 				addToFavorite(name) {
-					console.log('Name: '+name);
-					axios.post('/profile/favorite', {coinName : name})
+					axios.post('/profile/addFavorite', {coinName : name})
 					  .then((response) => {
-					  	console.log(response.data);
 					    if (response.data == 'exists') {
 					    	M.toast({html: 'Already in favorites'});
-					    }
-					    else {
+					    } else if (response.data == 'login') {
+					    	window.location.href = '/login';
+					    } else {
 					    	M.toast({html: name+' added to favorites'});
-					    	// app.loadFavorites();
+					    	app.loadFavorites();
 					    }
 					  })
 					  .catch((error) => {
@@ -159,21 +142,23 @@
 				loadData() {
 					console.log("Loading data from the CryptoCompare");
 					M.toast({html: '<i class="material-icons medium">sync</i>', inDuration: '0'})
-					axios.get('https://min-api.cryptocompare.com/data/top/mktcapfull?limit=100&tsym=USD&api_key={1ce5d6f4c61dbded3d6a38dce91ebf37df91fe448fd7cd97755cdf33f5791ed1}')
-						.then((response) => {
-							app.items = [];
-						    for (var i = 0; i < response.data.Data.length; i++) {
-						    	let obj = {
-						    		name: response.data.Data[i].CoinInfo.FullName,
-						    		ticker: response.data.Data[i].CoinInfo.Name,
-						    		mc: response.data.Data[i].DISPLAY.USD.MKTCAP,
-						    		price: response.data.Data[i].DISPLAY.USD.PRICE,
-						    		ImageUrl: 'https://www.cryptocompare.com'+response.data.Data[i].CoinInfo.ImageUrl
-						    	}
-								app.items.push(obj);
-						    }
-
+					axios.get('/profile/loadCoins').then((response) => {
+						app.items = [];
+					    for (var i = 0; i < response.data.Data.length; i++) {
+					    	let obj = {
+					    		name: response.data.Data[i].CoinInfo.FullName,
+					    		ticker: response.data.Data[i].CoinInfo.Name,
+					    		mc: response.data.Data[i].DISPLAY.USD.MKTCAP,
+					    		price: response.data.Data[i].DISPLAY.USD.PRICE,
+					    		ImageUrl: 'https://www.cryptocompare.com'+response.data.Data[i].CoinInfo.ImageUrl
+					    	}
+							app.items.push(obj);
+					    }
 					  }).then(() => {
+					  		let loggedElements = document.getElementsByClassName("fade-in");
+					  		for (var i = 0; i < loggedElements.length; i++) {
+					  			loggedElements[i].style.opacity = 1;
+					  		}
 					  		app.loadFavorites();
 					  		M.Toast.dismissAll();
 					  })
@@ -182,18 +167,47 @@
 					  })
 				},
 				loadFavorites() {
-					console.log('Loading / refreshing favorites')
-					axios.get('/profile/load')
+					if (app.logged == true) {
+						console.log('Loading / refreshing favorites')
+						axios.get('/profile/loadFavorite')
+							.then((response) => {
+								app.favorites = [];
+						    	for (var i = 0; i < response.data.length; i++) {
+						    		let name = response.data[i].coinName;
+						    		for (var j = 0; j < app.items.length; j++) {
+						    			if (name == app.items[j].name) {
+						    				app.favorites.push(app.items[j]);
+						    			}
+						    		}
+						    	}
+						  	}).catch((error) => {
+						    	console.log(error);
+						});
+					}
+				},
+				loginStatus() {
+					axios.get('/profile')
 						.then((response) => {
-							app.favorites = [];
-					    	for (var i = 0; i < response.data.length; i++) {
-					    		let name = response.data[i].coinName;
-					    		for (var j = 0; j < app.items.length; j++) {
-					    			if (name == app.items[j].name) {
-					    				app.favorites.push(app.items[j]);
-					    			}
-					    		}
-					    	}
+							if (response.data != 'login') {
+								app.logged = true;
+								console.log('User is logged');
+							} else {
+								console.log('User is not logged');
+							}
+					  	}).then(() => {
+					  		if (app.logged == false) {
+								let notLoggedElements = document.getElementsByClassName("seen-if-not-logged");
+						  		for (var i = 0; i < notLoggedElements.length; i++) {
+						  			notLoggedElements[i].style.display = "block";
+						  		}
+							} else {
+								let loggedElements = document.getElementsByClassName("seen-if-logged");
+						  		for (var i = 0; i < loggedElements.length; i++) {
+						  			loggedElements[i].style.display = "table";
+						  		}
+							}
+					  	}).then(() => {
+					  		app.loadData();
 					  	}).catch((error) => {
 					    	console.log(error);
 					  });
@@ -201,7 +215,7 @@
 			},
 			mounted() {
 				console.log("App mounted")
-				this.loadData();
+				this.loginStatus();
 			}
 		})
 	</script>

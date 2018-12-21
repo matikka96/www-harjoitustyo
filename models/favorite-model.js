@@ -1,3 +1,6 @@
+
+// Creating Favorites schema for databae
+
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 

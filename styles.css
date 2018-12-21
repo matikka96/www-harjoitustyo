@@ -42,7 +42,18 @@ input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default
 .pointer {
 	cursor: pointer;
 }
+.seen-if-logged {
+	display: none;
+}
+.seen-if-not-logged {
+	display: none;
+}
+.fade-in {
+	opacity: 0;
+	transition-duration: 0.5s;
+}
 
+/*Suspend columns marked with id="display"*/
 @media screen and (max-width: 450px) {
   #mobile {
   	display: none;

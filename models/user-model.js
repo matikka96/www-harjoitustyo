@@ -1,3 +1,6 @@
+
+// Creating User schema for databae
+
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
